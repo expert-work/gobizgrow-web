@@ -1,0 +1,4 @@
+[13-Aug-2020 16:04:55 UTC] PHP Fatal error:  Allowed memory size of 805306368 bytes exhausted (tried to allocate 601886720 bytes) in /home/customer/www/app.gobizgrow.com/public_html/routes/web.php on line 26
+[13-Aug-2020 16:13:49 UTC] PHP Fatal error:  Allowed memory size of 805306368 bytes exhausted (tried to allocate 450891776 bytes) in /home/customer/www/app.gobizgrow.com/public_html/app/Helpers/Helper.php on line 41
+[13-Aug-2020 11:16:09 CST6CDT] PHP Parse error:  syntax error, unexpected ';', expecting ']' in /home/customer/www/app.gobizgrow.com/public_html/app/Helpers/Helper.php on line 40
+[13-Aug-2020 11:17:18 CST6CDT] PHP Parse error:  syntax error, unexpected '}', expecting ';' in /home/customer/www/app.gobizgrow.com/public_html/app/Helpers/Helper.php on line 43

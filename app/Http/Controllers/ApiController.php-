@@ -1,0 +1,943 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Validator;
+use App\User;
+use App\Industry;
+use App\Customer;
+use App\Item;
+use App\Unit;
+use App\Expense;
+use App\Category;
+use App\ExpenseCategory;
+use App\Invoice;
+use App\Item_category;
+use App\Estimate;
+use App\EstimateItem;
+
+
+use Illuminate\Foundation\Auth\SendsPasswordResetEmails;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Hash;
+use Auth;
+class ApiController extends Controller{
+	use SendsPasswordResetEmails;
+
+	/**
+	 * Create a new controller instance.
+	 */
+	public function __construct(){
+		//$this->middleware('guest');
+	}
+
+
+
+
+
+	public function RegistersUsers(Request $request){
+                $data=$request->input();
+                $validator =  Validator::make($request->all(),[
+				    'name' => ['required', 'string', 'max:255'],
+					'industry' => ['required', 'string', 'max:255'],
+					'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+					'password' => ['required', 'string', 'min:8'],
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+
+			       $data= User::create([
+			            'name' => $data['name'],
+			            'email' => $data['email'],
+			            'industry' => $data['industry'],
+			            'password' => Hash::make($data['password']),
+			            'auth_token'=>Hash::make($data['email'])
+			        ]);
+
+
+			       $user=User::where('id',$data->id)->first();
+			        return response()->json([
+			            'message' => 'Your Account Successfully Created',
+			            'data' => $user,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);	 
+	}
+
+
+
+	public function LoginUsers(Request $request){
+                $data=$request->input();
+                $validator =  Validator::make($request->all(),[
+					'email' => ['required', 'string', 'email', 'max:255'],
+					'password' => ['required', 'string', 'min:8'],
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+ 			        if(Auth::attempt(['email' => $data['email'], 'password' => $data['password']])){
+ 			        	$user=User::where('email',$data['email'])->first();
+ 			        	if(!isset($user->auth_token)|| $user->auth_token ==''){
+                          $auth_token=Hash::make($data['email']);
+ 			               User::where('email',$data['email'])->update(['auth_token'=>$auth_token]);
+ 			              $user=User::where('email',$data['email'])->first();
+ 			        	}
+	                    return response()->json([
+				            'message' => ' Successfully login',
+				            'data' => $user,
+				            'isError' => false,
+				            'responseCode'=>200
+				        ], 200);
+			        }else{
+ 				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => ['email'=>['email or password is wrong']],
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				     
+			        } 			        
+	}
+
+	public function resetPassword(Request $request){
+		$this->validateEmail($request);
+		$response = $this->broker()->sendResetLink(
+			$request->only('email')
+		);
+		return $response == Password::RESET_LINK_SENT
+			? response()->json(['message' => 'Please check Reset link sent to your email.', 'isError' => false,'responseCode'=>200], 200)
+			: response()->json(['message' => 'Unable to send reset link', 'isError' => true,'responseCode'=>201], 401);
+	}
+
+
+      public function industries(){
+                 $data=Industry::where('status','1')->select('id as value','industry_name as label')->get();
+                      return response()->json([
+				            'message' => ' Successfully login',
+				            'data' => $data,
+				            'isError' => false,
+				            'responseCode'=>200
+				        ], 200);   
+      }
+
+      public  function createUniqueId( $delimiter = '-'){
+    $str= Hash::make(uniqid(time(), true));
+    $slug = strtolower(trim(preg_replace('/[\s-]+/', $delimiter, preg_replace('/[^A-Za-z0-9-]+/', $delimiter, preg_replace('/[&]/', 'and', preg_replace('/[\']/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $str))))), $delimiter));
+    return $slug.uniqid(time(), true);
+   }
+
+
+ public function customersAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $customer=Customer::where('company_id',$company_id)->orderBy('id','DESC')->paginate(10);
+            }else{
+               $customer=Customer::where('company_id',$company_id)->where('name', 'like', '%'.$q.'%')->orderBy('id','DESC')->paginate(10);
+
+            }
+	        
+	        return response()->json([
+	            'message' => 'All Customer List',
+	            'data' => $customer,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+      public function customersAdd(Request $request){
+      	 $data=$request->input();
+                $validator =  Validator::make($request->all(),[
+				    'email' => 'required|email',
+                    'name' => 'required',
+                    'phone' => 'required|min:10',
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+
+			       $data = Customer::create([
+		                'name' => $data['name'],
+		                'email' => $data['email'],
+		                'phone' => $data['phone'],
+		                'street_address'=>$data['street_address'], 
+		                'city'=>$data['city'], 
+		                'state'=>$data['state'], 
+		                'zip_code'=>$data['zip_code'], 
+		                'customer_notes'=>$data['customer_notes'],
+		                'company_id' => $data['company_id'],
+		                'auth_token'=> $this->createUniqueId(),
+		              ]); 
+
+
+			        
+			        return response()->json([
+			            'message' => 'Customer Successfully Created',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+      }
+
+
+   public function customersEdit(Request $request,$auth_token){
+    $data=$request->input();
+         
+           $validator =  Validator::make($request->all(),[
+				    'email' => 'required|email',
+                    'name' => 'required',
+                    'phone' => 'required|min:10',
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+           $data = Customer::where('auth_token',$auth_token)
+                  ->update([
+                        'name' => $data['name'],
+                        'email' => $data['email'],
+                        'phone' => $data['phone'],
+                        'street_address'=>$data['street_address'], 
+                        'city'=>$data['city'], 
+                        'state'=>$data['state'], 
+                        'zip_code'=>$data['zip_code'], 
+                        'customer_notes'=>$data['customer_notes']                  
+                  ]); 
+                 // print_r($data);
+          // $customer=Customer::where('id',$data->id)->first();
+			        return response()->json([
+			            'message' => 'Customer Successfully Updated',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+   }
+
+    public function customersDelete($auth_token) {
+               $data =   Customer::where('auth_token',$auth_token)->delete();
+                 return response()->json([
+			            'message' => 'Customer Successfully Deleted',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+        }
+
+  
+
+ public function itemAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $items=Item::where('company_id',$company_id)->orderBy('id','DESC')->paginate(10);
+            }else{
+               $items=Item::where('company_id',$company_id)->where('name', 'like', '%'.$q.'%')->orderBy('id','DESC')->paginate(10);
+
+            }
+	 
+
+         
+	        return response()->json([
+	            'message' => 'All Items List',
+	            'data' => $items,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}  
+  
+ public function getItemsCategoryPrice(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $item_id= isset($data['item_id'])?$data['item_id']:'';
+
+               $Item_category=Item_category::where('company_id',$company_id)->where('item_id',$item_id)->orderBy('id','DESC')->get()	; 
+ 
+                               
+	        return response()->json([
+	            'message' => 'All  List',
+	            'data' => $Item_category,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+} 
+ 
+  
+         
+
+
+    public function itemsNew(Request $request){
+      	 $data=$request->input();
+                $validator =  Validator::make($request->all(),[
+				     'name' => 'required',
+                     'description' => 'required',
+                     'price' => 'required',
+                     'unit' => 'required'
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+
+			        $data= Item::create([
+                'name' => $data['name'],
+                'description' => $data['description'],
+                'price' => $data['price'],
+                'company_id' => 1,
+                'auth_token'=> $this->createUniqueId(),
+                'unit' => $data['unit']
+             ]); 
+
+
+			       $item=Item::where('id',$data->id)->first();
+			        return response()->json([
+			            'message' => 'Item Successfully Created',
+			            'data' => $item,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+      }
+
+		public function itemsAdd(Request $request){
+		    	$data=$request->input();
+
+		                   $validator =  Validator::make($request->all(),[
+							'name' => 'required',
+							'price' => 'required',
+							'unit' => 'required',							
+							'company_id'=> 'required'
+							]);
+
+							if($validator->fails()){
+							return response()->json([
+							'message' => 'validation_error',
+							'data' => $validator->errors(),
+							'isError' => true,
+							'responseCode'=>201
+							], 401);
+							}
+ 
+
+                              
+                             
+
+		              
+				          $item=  Item::create([
+				                'name' => $data['name'],
+				                'price' => $data['price'],
+				                'description' => $data['description'],
+                                'unit' => $data['unit'],
+		 		                'company_id' => $data['company_id'],
+				                'auth_token'=>  $this->createUniqueId(),
+				                
+				             ]); 
+
+
+							$category=isset($data['category'])? $data['category']:'';
+							$category_ids=isset($data['category_ids'])? $data['category_ids']:'';
+							$categories= explode(',', $category);
+							$categoryIds= explode(',', $category_ids);
+ 
+							if(isset($categories) && count($categories)){
+					          foreach ($categories as $key => $value) {
+ 					          	     $c_a_t_e_g_o_r_y_i_d=$categoryIds[$key];
+                                     
+	                                 $d=[
+	                                'item_id' => $item->id,
+	                                'category_id' => $c_a_t_e_g_o_r_y_i_d,
+	                                'price' => $value,
+	                                'company_id' => $data['company_id']
+	                                ];
+	                                Item_category::create($d);
+					          }
+
+							}
+                           
+
+				            return response()->json([
+					            'message' => 'Unit Successfully Created',
+					            'data' => $item,
+					            'isError' => false,
+					            'responseCode'=>200
+					        ], 200);
+
+		 }
+      public function itemsEdit(Request $request,$auth_token){
+      	$data=$request->input();
+         
+           $validator =  Validator::make($request->all(),[
+				   'name' => 'required',
+                   'description' => 'required',
+                   'price' => 'required',
+                   'unit' => 'required'
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+           $data = Item::where('auth_token',$auth_token)
+                  ->update([
+                     'name' => $data['name'],
+                     'description' => $data['description'],
+                     'price' => $data['price'],
+                     'company_id' => 1,
+                     'unit' => $data['unit']
+                  ]);
+                
+			        return response()->json([
+			            'message' => 'Item Successfully Updated',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+      }
+
+
+public function itemsDelete($auth_token) {
+               $data =   Item::where('auth_token',$auth_token)->delete();
+                 return response()->json([
+			            'message' => 'Item Successfully Deleted',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+        }
+
+
+ 
+
+
+ public function unitsAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $units=Unit::where('company_id',$company_id)->orderBy('id','DESC')->paginate(10);
+            }else{
+               $units=Unit::where('company_id',$company_id)->where('name', 'like', '%'.$q.'%')->orderBy('id','DESC')->paginate(10);
+
+            }
+	        
+	        return response()->json([
+	            'message' => 'All Items List',
+	            'data' => $units,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+public function unitsAdd(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'name' => 'required',
+					'company_id'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+              
+		          $unit=  Unit::create([
+		                'name' => $data['name'],
+ 		                'company_id' => $data['company_id'],
+		                'auth_token'=>  $this->createUniqueId(),
+		                
+		             ]); 
+		            return response()->json([
+			            'message' => 'Unit Successfully Created',
+			            'data' => $unit,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+
+
+
+
+
+    public function unitsEdit(Request $request,$auth_token){
+    	$data=$request->input();
+         
+					$validator =  Validator::make($request->all(),[
+					'name' => 'required',
+                     'company_id'=> 'required'
+					]);
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+                   $data = Unit::where('auth_token',$auth_token)
+                  ->update([
+                     'name' => $data['name'],
+                    ]);
+                
+			        return response()->json([
+			            'message' => 'Unit Successfully Updated',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+    }
+
+public function unitsDelete($auth_token) {
+               $data =   Unit::where('auth_token',$auth_token)->delete();
+                 return response()->json([
+			            'message' => 'Unit Successfully Deleted',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+        }
+
+ public function categoriesAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $category=Category::where('company_id',$company_id)->orderBy('id','DESC')->paginate(10);
+            }else{
+               $category=Category::where('company_id',$company_id)->where('name', 'like', '%'.$q.'%')->orderBy('id','DESC')->paginate(10);
+
+            }
+	        
+	        return response()->json([
+	            'message' => 'All Items List',
+	            'data' => $category,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+
+public function categoriesAdd(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'name' => 'required',
+					'company_id'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+              
+		          $category=  Category::create([
+		                'name' => $data['name'],
+		                'description' => isset($data['description'])?$data['description']:'',
+		                'company_id' => $data['company_id'],
+		                'auth_token'=>  $this->createUniqueId(),
+		                
+		             ]); 
+		            return response()->json([
+			            'message' => 'Category Successfully Created',
+			            'data' => $category,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+
+
+public function categoriesEdit(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'name' => 'required',
+					'company_id'=> 'required',
+					'auth_token'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+              
+		             $category=  Category::where('auth_token', $data['auth_token'])->update([
+		                'name' => $data['name'],
+		                'description' => isset($data['description'])?$data['description']:''
+		             ]); 
+		            return response()->json([
+			            'message' => 'Category update Created',
+			            'data' => $category,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+ public function invoicesAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $invoices=Invoice::where('invoices.company_id',$company_id)
+						->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
+ 						->select('customers.name as customer_name','invoices.*')
+						->orderBy('invoices.id','DESC')->paginate(10);
+             }else{
+               $invoices=Invoice::where('invoices.company_id',$company_id)
+							->where('invoices.invoice_number', 'like', '%'.$q.'%')
+							->leftJoin('customers', 'customers.id', '=', 'invoices.customer_id')
+							->select('customers.name as customer_name','invoices.*')
+							->orderBy('invoices.id','DESC')->paginate(10);
+             }
+	        
+	        return response()->json([
+	            'message' => 'All Invoices List',
+	            'data' => $invoices,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+ public function estimatesAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $estimates=Estimate::where('estimates.company_id',$company_id)
+						->leftJoin('customers', 'customers.id', '=', 'estimates.customer_id')
+ 						->select('customers.name as customer_name','estimates.*')
+						->orderBy('estimates.id','DESC')->paginate(10);
+             }else{
+               $estimates=Estimate::where('estimates.company_id',$company_id)
+							->where('estimates.invoice_number', 'like', '%'.$q.'%')
+							->leftJoin('customers', 'customers.id', '=', 'estimates.customer_id')
+							->select('customers.name as customer_name','estimates.*')
+							->orderBy('estimates.id','DESC')->paginate(10);
+             }
+	        
+	        return response()->json([
+	            'message' => 'All estimates List',
+	            'data' => $estimates,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+
+
+ public function expensesAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $expenses=Expense::where('company_id',$company_id)->orderBy('id','DESC')->paginate(10);
+            }else{
+               $expenses=Expense::where('company_id',$company_id)->where('amount', 'like', '%'.$q.'%')->orderBy('id','DESC')->paginate(10);
+
+            }
+	        
+	        return response()->json([
+	            'message' => 'All expenses List',
+	            'data' => $expenses,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+
+public function expensesAdd(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'expense_date' => 'required',
+					'amount' => 'required',
+					'expense_category_id' => 'required',
+					'company_id'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+                   $notes= isset($data['notes'])?$data['notes']:'';
+		          $Expense=  Expense::create([
+		                'expense_date' => date('Y-m-d',strtotime($data['expense_date'])),
+						'amount' => $data['amount'],
+						'notes' => $notes,
+						'expense_category_id' => $data['expense_category_id'],
+ 		                'company_id' => $data['company_id'],
+		                'auth_token'=>  $this->createUniqueId(),
+		                
+		             ]); 
+
+		           
+
+
+
+
+
+
+		            return response()->json([
+			            'message' => 'Expense Successfully Created',
+			            'data' => $Expense,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+ public function expensesCategoriesAll(Request $request){
+            $data=$request->input();
+            $company_id= isset($data['company_id'])?$data['company_id']:'';
+            $q= isset($data['q'])?$data['q']:'';
+
+            if($q==''){
+              $expensesCategories=ExpenseCategory::where('company_id',$company_id)->orderBy('id','DESC')->select('name as label','id as value','expense_categories.*')->paginate(10);
+            }else{
+               $expensesCategories=ExpenseCategory::where('company_id',$company_id)->where('name', 'like', '%'.$q.'%')->orderBy('id','DESC')->select('name as label','id as value','expense_categories.*')->paginate(10);
+
+            }
+	        
+	        return response()->json([
+	            'message' => 'All expenses category List',
+	            'data' => $expensesCategories,
+	            'isError' => false,
+	            'responseCode'=>200
+	        ], 200);
+}
+
+
+public function expenses(){
+	 $expenses=Expense::orderBy('id','DESC')->get();
+			        return response()->json([
+			            'message' => 'All Expenses',
+			            'data' => $expenses,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+}
+
+public function expensesNew(Request $request){
+    	 $data=$request->input();
+                $validator =  Validator::make($request->all(),[
+				     'expense_date' => 'required',
+                      'amount' => 'required',
+                      'expense_category_id' => 'required',
+                      'receipt' => 'max:2048',
+                     
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+  $attachment_receipt='';
+            if($request->has('receipt')) {
+                    $fileName = time().'.'.$request->receipt->extension();  
+                    $request->receipt->move(public_path('uploads/attachment_receipt'), $fileName);
+                    $attachment_receipt=$fileName;
+            }
+			        $data=  Expense::create([
+                'expense_date' => date('Y-m-d',strtotime($data['expense_date'])),
+                 'amount' => $data['amount'],
+                 'notes' => $data['notes'],
+                 'expense_category_id' => $data['expense_category_id'],
+                 'attachment_receipt'=>$attachment_receipt,
+                 'auth_token'=> $this->createUniqueId(),
+                 'company_id' => 1,
+                
+             ]); 
+
+
+			       $expense=Expense::where('id',$data->id)->first();
+			        return response()->json([
+			            'message' => 'Expense Successfully Created',
+			            'data' => $expense,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+    }
+
+    public function expensesEdit(Request $request,$auth_token){
+    	$data=$request->input();
+         
+           $validator =  Validator::make($request->all(),[
+				    'expense_date' => 'required',
+                    'amount' => 'required',
+                    'expense_category_id' => 'required',
+                    'receipt' => 'max:2048',
+                   
+				    ]);
+				    if($validator->fails()){
+				        return response()->json([
+				            'message' => 'validation_error',
+				            'data' => $validator->errors(),
+				            'isError' => true,
+				            'responseCode'=>201
+				        ], 401);
+				    }
+           $data = Expense::where('auth_token',$auth_token)
+                  ->update([
+                     'expense_date' => date('Y-m-d',strtotime($data['expense_date'])),
+                    'amount' => $data['amount'],
+                    'notes' => $data['notes'],
+                    'expense_category_id' => $data['expense_category_id'],
+                
+                  ]);
+                if($request->has('receipt')) {
+                    $fileName = time().'.'.$request->receipt->extension();  
+                    $request->receipt->move(public_path('uploads/attachment_receipt'), $fileName);                    
+                    Expense::where('auth_token',$auth_token)
+                          ->update([
+                             'attachment_receipt' => $fileName,
+                            ]);
+
+            }
+			        return response()->json([
+			            'message' => 'Expense Successfully Updated',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+    }
+  
+public function expensesDelete($auth_token) {
+               $data =   Expense::where('auth_token',$auth_token)->delete();
+                 return response()->json([
+			            'message' => 'Expense Successfully Deleted',
+			            'data' => $data,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+        }
+public function expensesCategoriesEdit(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'name' => 'required',
+					'company_id'=> 'required',
+					'auth_token'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+              
+		             $ExpenseCategory=  ExpenseCategory::where('auth_token', $data['auth_token'])->update([
+		                'name' => $data['name'],
+		                'description' => isset($data['description'])?$data['description']:''
+		             ]); 
+		            return response()->json([
+			            'message' => 'Expense Category update Created',
+			            'data' => $ExpenseCategory,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+  public function expensesCategoriesAdd(Request $request){
+    	$data=$request->input();
+
+                   $validator =  Validator::make($request->all(),[
+					'name' => 'required',
+					'company_id'=> 'required'
+					]);
+
+					if($validator->fails()){
+					return response()->json([
+					'message' => 'validation_error',
+					'data' => $validator->errors(),
+					'isError' => true,
+					'responseCode'=>201
+					], 401);
+					}
+
+              
+		          $category=  ExpenseCategory::create([
+		                'name' => $data['name'],
+		                'description' => isset($data['description'])?$data['description']:'',
+		                'company_id' => $data['company_id'],
+		                'auth_token'=>  $this->createUniqueId(),
+		                
+		             ]); 
+		            return response()->json([
+			            'message' => 'Expense Category Successfully Created',
+			            'data' => $category,
+			            'isError' => false,
+			            'responseCode'=>200
+			        ], 200);
+
+ }
+
+
+
+}

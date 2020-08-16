@@ -1,0 +1,617 @@
+@extends('layouts.app')
+
+@section('content')
+ 
+                <!-- BEGIN CONTENT BODY -->
+                     <!-- BEGIN PAGE HEADER-->
+                    <!-- BEGIN THEME PANEL -->
+                   
+                    <!-- END THEME PANEL -->
+                    <h3 class="page-title"> {{$page_name}}
+                     </h3>
+                    <div class="page-bar">
+                        <ul class="page-breadcrumb">
+                            <li>
+                                <i class="icon-home"></i>
+                                <a href="{{url('')}}">Home</a>
+                                <i class="fa fa-angle-right"></i>
+                            </li>
+                            <li>
+                                <span>{{$page_name}}</span>
+                            </li>
+                        </ul>
+                        <div class="page-toolbar">
+                            <div class="btn-group pull-right">
+                                 <a href="{{url('invoices')}}" type="button" class="btn btn-fit-height grey-salt "   data-delay="1000" data-close-others="true"> Invoices
+                                 </a>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END PAGE HEADER-->
+                    <!-- BEGIN DASHBOARD STATS 1-->
+                        <div class="row">
+                        <div class="col-md-12 ">
+                            <!-- BEGIN SAMPLE FORM PORTLET-->
+                            <div class="portlet light ">
+                                <div class="portlet-title">
+                                    <div class="caption font-red-sunglo">
+                                        <i class="icon-settings font-red-sunglo"></i>
+                                        <span class="caption-subject bold uppercase"> {{$page_name}}</span>
+                                    </div>
+                                   
+                                </div>
+                                <div class="portlet-body form">
+                                    <form  action="{{url('invoices/new')}}" method="post"  enctype="multipart/form-data" onsubmit="return formValidation();" >
+                                       {{ csrf_field() }}
+                                        <div class="form-body">
+                                         
+                                      <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label>Invoice Date</label>
+                                                <div class="input-group">
+                                                   <div class="input-group input-medium date date-picker" data-date-format="dd/mm/yyyy" data-date-start-date="+0d">
+                                                        <input type="text" class="form-control" readonly="" id="invoice_date" name="invoice_date" value="{{old('invoice_date')}}" >
+                                                        <span class="input-group-btn">
+                                                            <button class="btn default" type="button">
+                                                                <i class="fa fa-calendar"></i>
+                                                            </button>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @error('invoice_date')
+                                                            <span class="invalid-feedback" style="color:red" role="alert">
+                                                                <strong>{{ $message }}</strong>
+                                                            </span>
+                                                     @enderror
+                                        </div>
+
+                                      <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label>Due Date</label>
+                                                <div class="input-group">
+                                                   <div class="input-group input-medium date date-picker" data-date-format="dd/mm/yyyy" data-date-start-date="+0d">
+                                                        <input type="text" class="form-control" readonly="" id="due_date" name="due_date" value="{{old('due_date')}}" >
+                                                        <span class="input-group-btn">
+                                                            <button class="btn default" type="button">
+                                                                <i class="fa fa-calendar"></i>
+                                                            </button>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                                     @error('due_date')
+                                                            <span class="invalid-feedback" style="color:red" role="alert">
+                                                                <strong>{{ $message }}</strong>
+                                                            </span>
+                                                     @enderror
+                                        </div>                                        
+
+
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label>Invoice Number/Name</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-addon">
+                                                     </span>
+                                                    <input type="text" name="invoice_number" id="invoice_number" value="{{old('invoice_number')}}" class="form-control" placeholder="123453"> 
+                                                </div>
+                                            </div>
+                                             @error('amount')
+                                                <span class="invalid-feedback" style="color:red" role="alert">
+                                                    <strong>{{ $message }}</strong>
+                                                </span>
+                                            @enderror
+                                        </div>
+
+                                         <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label style="display: block;">Customer</label>
+                                                <select class="form-control" name="customer_id" id="customer_id">
+                                                   <option value="">Select a Customer</option>
+                                                </select>
+                                            </div>
+                                             @error('customer_id')
+                                                <span class="invalid-feedback" style="color:red" role="alert">
+                                                    <strong>{{ $message }}</strong>
+                                                </span>
+                                            @enderror
+                                        </div>
+
+
+
+<!-- ============================Add New Items Start================================ -->
+<div class="itmes_container">
+
+    <div class=" block item_block_header" >
+        <div class="col-md-5 col-sm-5 col-xs-5"> 
+           <span>Items</span>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+            <span>Quantity</span>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         <span>Price</span>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         <span>Amount</span>
+        </div>
+         <div class="col-md-1 col-sm-1 col-xs-1">
+         <span></span>
+        </div>
+       
+    </div>
+
+   <?php $uniqId= 'it'.rand().rand().rand(); ?>
+    <div class="row block items_row" id="{{$uniqId}}">
+        <div class="col-md-5 col-sm-5 col-xs-5"> 
+          <select class="form-control" id="{{$uniqId}}_item" required  name="item_id[{{$uniqId}}]"  onchange="calCulateOnSelect('{{$uniqId}}')"  > <option value="">Select an Item</option></select>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+            <input type="number"  value="1"  name="quantity[{{$uniqId}}]" onchange="calCulate()"   onkeyup="calCulate()"   min="1"  class="form-control" id="{{$uniqId}}_quantity"  required   onkeypress="return isNumberKey(event)">
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         <input type="text"  class="form-control" required   name="price[{{$uniqId}}]"   onchange="calCulate()" onkeyup="calCulate()"  min="1" id="{{$uniqId}}_price" onkeypress="return isNumberKey(event)">
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         $ <span class="item_amount" id="{{$uniqId}}_amount" >0</span>
+        </div>
+        <div class="col-md-1 col-sm-1 col-xs-1">
+         <span></span>
+        </div>
+    </div>
+
+
+    <div class="new_item_rows"></div>
+    <div class=" block item_block_footer" onclick="addItemRow()">
+        <div class="col-md-12 col-sm-12 col-xs-12"> 
+           <span>Add an Item</span>
+        </div>
+    </div>
+
+</div>
+<!-- ============================Add New Items End================================ -->
+
+                                       
+
+                                        <div class="row" style="margin: 0;margin-top: 40px">
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                     <label>Notes</label>
+                                                     <textarea class="form-control" rows="5" name="notes"></textarea>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                
+                                            </div>
+                                            <div class="col-md-4">
+                                                 <div style="padding: 10px;padding: 10px;background: #d4d5d6; margin-top: 24px;font-size: 16px;line-height: 24px;">
+                                                     <div class="row">
+                                                         <div class="col-md-7 col-sm-7 col-xs-7"><span>SUB TOTAL</span></div>
+                                                         <div class="col-md-5 col-sm-5 col-xs-5"><input type="hidden" name="sub_total" value="0" id="sub_total"> $<span class="sub_total">0</span></div>
+                                                     </div>
+                                                      <hr>
+                                                     <div class="row">
+                                                         <div class="col-md-7 col-sm-7 col-xs-7"><span>DISCOUNT</span></div>
+                                                         <div class="col-md-5 col-sm-5 col-xs-5"><input type="text"  onchange="calCulate()"   onkeyup="calCulate()"   name="discount" id="discount"  style="width: 50px" onkeypress="return isNumberKey(event)">
+                                                            <select style="width: 60px;height: 30px;"  onchange="calCulate()" name="discount_type" id="discount_type" ><option>Fixed</option> <option>Percentage</option></select>
+                                                         </div>
+                                                         <input type="hidden" name="discount_val" id="discount_val" value="0">
+                                                     </div>
+
+                                                       <div class="row" style="    margin-top: 20px;padding: 15px;background: white;color: #3798dc;font-size: 18px;font-weight: 700;">
+                                                         <div class="col-md-7 col-sm-7 col-xs-7"><span>TOTAL</span></div>
+                                                         <div class="col-md-5 col-sm-5 col-xs-5"><input type="hidden" name="total" id="total_amount"> $<span class ="total_amount">0</span></div>
+                                                     </div>
+
+                                                 </div>
+                                            </div>
+
+                                        </div>
+
+     
+
+                                        
+                                          <div class="form-group">
+                                               <div class="input-group">
+                                                 <button style="    margin-top: 23px; margin-left: 15px;" type="submit"  class="btn blue">Save Invoice</button>
+                                             </div>
+                                         </div>
+
+
+<br><br><br>
+                                     </div>
+                                   </form>
+                                </div>
+                            </div>
+                            <!-- END SAMPLE FORM PORTLET-->
+                          
+                        </div>
+                        
+                    </div>
+            
+@endsection
+@section('css')
+
+<style type="text/css">
+    .block{
+        display: block;
+        clear:both;
+        width: 100%;
+    }
+
+ .item_block_header{    
+    padding: 10px;
+    line-height: 33px;
+    height: 54px;
+    border: 1px solid #d4d5d6;
+    font-size: 16px;
+    color: #5b5b5f;
+    font-weight: 600;
+    margin-bottom: 5px;
+    background-color: #d4d5d6;
+}
+ .item_block_footer{   
+     margin-top: 30px;
+    text-align: center;
+    padding: 5px;
+    line-height: 33px;
+    height: 42px;
+    border: 1px solid #d4d5d6;
+    font-size: 16px;
+    color: #3798dc;
+    font-weight: 600;
+    margin-bottom: 5px;
+    background-color: #ffffff;
+    cursor: pointer;
+}
+
+span.item_amount {
+    font-size: 18px;
+    color: #3798dc;
+    line-height: 1.5;
+}
+.itmes_container {
+    padding: 15px;
+}
+.row.block.items_row {
+
+    margin: 0;
+        margin-top: 5px;
+    background: #d4d5d6;
+    padding: 10px;
+}
+span.select2.select2-container.select2-container--bootstrap {
+    background: white;
+    border-radius: 5px !important;
+    border: 1px solid blue;
+    height: 34px;
+    line-height: 33px;
+    max-width: 250px;
+}
+</style>
+        <link href="{{url('')}}/assets/global/plugins/bootstrap-fileinput/bootstrap-fileinput.css" rel="stylesheet" type="text/css" />
+
+    <link href="{{url('')}}/assets/global/plugins/bootstrap-daterangepicker/daterangepicker.min.css" rel="stylesheet" type="text/css" />
+        <link href="{{url('')}}/assets/global/plugins/bootstrap-datepicker/css/bootstrap-datepicker3.min.css" rel="stylesheet" type="text/css" />
+        <link href="{{url('')}}/assets/global/plugins/bootstrap-timepicker/css/bootstrap-timepicker.min.css" rel="stylesheet" type="text/css" />
+        <link href="{{url('')}}/assets/global/plugins/bootstrap-datetimepicker/css/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css" />
+        <link href="{{url('')}}/assets/global/plugins/clockface/css/clockface.css" rel="stylesheet" type="text/css" />
+        <!-- END PAGE LEVEL PLUGINS -->
+        <!-- BEGIN THEME GLOBAL STYLES -->
+        <link href="{{url('')}}/assets/global/css/components.min.css" rel="stylesheet" id="style_components" type="text/css" />
+         <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css" rel="stylesheet" />
+
+@endsection
+
+
+@section('script')
+<script type="text/javascript">
+  var ITEMS_DATA=[];
+  function addItemRow(){
+    var id=makeid(15);
+   var html=`<div class="row block items_row" id="`+id+`">
+        <div class="col-md-5 col-sm-5 col-xs-5"> 
+          <select id="`+id+`_item" required class="form-control"  name="item_id[`+id+`]"   onchange="calCulateOnSelect('`+id+`')" > <option value="">Select an Item</option></select>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+            <input id="`+id+`_quantity" required type="number" onchange="calCulate()"  onkeyup="calCulate()"   name="quantity[`+id+`]"  value="1"  min="1" class="form-control" onkeypress="return isNumberKey(event)">
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         <input type="text" id="`+id+`_price" required  name="price[`+id+`]"   onchange="calCulate()"  onkeyup="calCulate()"  class="form-control"  min="1"  onkeypress="return isNumberKey(event)">
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-2">
+         $ <span class="item_amount" id="`+id+`_amount">0</span>
+        </div>
+        <div class="col-md-1 col-sm-1 col-xs-1">
+         <span><i class="fa fa-trash" onclick="removeItemRow('`+id+`');"></i> </span>
+        </div>
+    </div>`;
+   $('.new_item_rows').append(html);
+
+
+       $("#"+id+"_item").select2({
+        minimumInputLength: 2,
+         ajax: {
+            url: API_URL+'get-items?company_id={{Auth::user()->company_id}}',
+            dataType: 'json',
+            type: "POST",
+            quietMillis: 50,
+            processResults: function (data) {
+                    var res = data.results.map(function (item) {
+                        return {id: item.id, text: item.text};
+                    });
+                 ITEMS_DATA= data.results;  
+                return {
+                    results: res
+                };
+            }
+
+         }
+    });
+
+
+  }  
+ 
+
+  function calCulate(){
+    // var quantity=$('#'+id+'_quantity').val();
+    // var price=$('#'+id+'_price').val();
+    // var amount=0;
+    // if(IsNumeric(quantity) && IsNumeric(price)){
+    //    amount=price*quantity;
+    // }
+    //   $('#'+id+'_amount').html(amount);
+console.log('------------------');
+console.log(ITEMS_DATA);
+
+    var sub_total=0;
+      $('.items_row').each(function(){
+       var  id= $(this).attr('id');
+                 var quantity=$('#'+id+'_quantity').val();
+                        var price=$('#'+id+'_price').val();
+                        var amount=0;
+                        if(!IsNumeric(quantity)){ $('#'+id+'_quantity').val(0);  }
+                        if(!IsNumeric(price)){ $('#'+id+'_price').val(0);  }
+                        if(IsNumeric(quantity) && IsNumeric(price)){
+                           amount=price*quantity;
+                        }
+                        $('#'+id+'_amount').html(amount);
+                        sub_total=sub_total+amount;
+      })
+      $('.sub_total').html(sub_total);
+      $('#sub_total').val(sub_total);
+      
+      
+       var discountAmount=0;
+       var discount=$('#discount').val();
+       var discount_type=$('#discount_type').val();
+       if(!IsNumeric(discount)){ $('#discount').val(0);  }
+       if(IsNumeric(discount) && discount>0){ 
+         if(discount_type=='Fixed' && sub_total>0){
+               discountAmount=discount;
+         }
+         if(discount_type=='Percentage' && sub_total>0){
+             discountAmount= (sub_total*discount)/100;
+         }
+         if(discountAmount>sub_total){ discount=0;discountAmount=0; $('#discount').val(0);}
+        }
+
+        $('#discount_val').val(discountAmount);
+        
+        $('.total_amount').html(sub_total-discountAmount);
+        $('#total_amount').val(sub_total-discountAmount);
+
+
+
+    }
+  function IsNumeric(n){
+      return !isNaN(parseFloat(n)) && isFinite(n);
+
+  }
+
+  function isNumberKey(evt)
+       {
+          var charCode = (evt.which) ? evt.which : evt.keyCode;
+          if (charCode != 46 && charCode > 31 
+            && (charCode < 48 || charCode > 57))
+             return false;
+
+          return true;
+       }
+ function removeItemRow(id){
+    $('#'+id).remove();
+
+    calCulate();
+ }
+function makeid(length) {
+   var result           = '';
+   var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+   var charactersLength = characters.length;
+   for ( var i = 0; i < length; i++ ) {
+      result += characters.charAt(Math.floor(Math.random() * charactersLength));
+   }
+   return result;
+}
+
+ 
+
+
+
+ </script>
+<!-- BEGIN PAGE LEVEL PLUGINS -->
+        <script src="{{url('')}}/assets/global/plugins/moment.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-daterangepicker/daterangepicker.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-fileinput/bootstrap-fileinput.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/moment.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-daterangepicker/daterangepicker.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-datepicker/js/bootstrap-datepicker.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-timepicker/js/bootstrap-timepicker.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/bootstrap-datetimepicker/js/bootstrap-datetimepicker.min.js" type="text/javascript"></script>
+        <script src="{{url('')}}/assets/global/plugins/clockface/js/clockface.js" type="text/javascript"></script>
+        <!-- END PAGE LEVEL PLUGINS -->
+        <!-- BEGIN THEME GLOBAL SCRIPTS -->
+         <!-- END THEME GLOBAL SCRIPTS -->
+        <!-- BEGIN PAGE LEVEL SCRIPTS -->
+        <script src="{{url('')}}/assets/pages/scripts/components-date-time-pickers.min.js" type="text/javascript"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js"></script>
+<script type="text/javascript">
+     $(function() {
+ 
+   
+    
+
+    $("#{{$uniqId}}_item").select2({
+        minimumInputLength: 2,
+         ajax: {
+            url: API_URL+'get-items?company_id={{Auth::user()->company_id}}',
+            dataType: 'json',
+            type: "POST",
+            quietMillis: 50,
+            processResults: function (data) {
+                    var res = data.results.map(function (item) {
+                        return {id: item.id, text: item.text};
+                    });
+                 ITEMS_DATA= data.results;  
+                return {
+                    results: res
+                };
+            }
+         }
+    });
+    
+    $("#customer_id").select2({
+        minimumInputLength: 2,
+         ajax: {
+            url: API_URL+'get-customers?company_id={{Auth::user()->company_id}}',
+            dataType: 'json',
+            type: "POST",
+            quietMillis: 50,
+             processResults: function (data) {
+                    var res = data.results.map(function (item) {
+                        return {id: item.id, text: item.text};
+                    });
+                return {
+                    results: res
+                };
+            }
+         }
+    });
+
+});
+
+
+function calCulateOnSelect(id){
+                          item_id=$('#'+id+'_item').val();
+                             ITEMS_DATA.map(function (item) {
+                            if(item_id==item.id){
+                                     $('#'+id+'_quantity').val(1);
+                                     $('#'+id+'_price').val(item.price);
+                                }
+                            });
+
+     calCulate();
+ }
+
+
+
+
+
+
+
+
+
+ function formValidation(){
+    var invoice_date= $('#invoice_date').val();
+    var due_date= $('#due_date').val();
+    var invoice_number= $('#invoice_number').val();
+    var customer_id= $('#customer_id').val();
+    var total_amount= $('#total_amount').val();
+
+
+    if(invoice_date==''){ 
+         swal({
+              title: "Err!",
+              text: "Please enter a invoice date",
+              icon: "warning",
+             });
+        return false;
+
+    }
+
+    if(due_date==''){ 
+         swal({
+              title: "Err!",
+              text: "Please enter a due date",
+              icon: "warning",
+             });
+        return false;
+
+    }
+    if(invoice_number==''){ 
+         swal({
+              title: "Err!",
+              text: "Please enter a invoice number/name",
+              icon: "warning",
+             });
+        return false;
+    }
+
+    if(customer_id==''){ 
+         swal({
+              title: "Err!",
+              text: "Please select a customer",
+              icon: "warning",
+             });
+        return false;
+    }
+    if(total_amount=='' || total_amount=='0'){ 
+         swal({
+              title: "Err!",
+              text: "Total amount must be greater then zero",
+              icon: "warning",
+             });
+        return false;
+    }
+    var id='{{$uniqId}}';
+    var item_id=$('#'+id+'_item').val();
+    var quantity=$('#'+id+'_quantity').val();
+    var price=$('#'+id+'_price').val();
+
+    if(item_id==''){ 
+     swal({
+          title: "Err!",
+          text: "Please select an item or remove row",
+          icon: "warning",
+         });
+    return false;
+    }
+
+    if(quantity==''){ 
+         swal({
+              title: "Err!",
+              text: "Please select  item quantity or remove row",
+              icon: "warning",
+             });
+    return false;
+    }
+    if(price==''){ 
+         swal({
+              title: "Err!",
+              text: "Please select  item quantity or remove row",
+              icon: "warning",
+             });
+            return false;
+    }
+
+
+
+
+     // return false;
+ } 
+</script>
+@endsection
+
+
+
